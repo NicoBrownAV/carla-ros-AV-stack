@@ -15,8 +15,8 @@ This workspace integrates the CARLA Simulator with ROS 2 (Humble) to run autonom
 ## Installation 
     sudo apt update
     sudo apt install ros-humble-vision-msgs \
-                 python3-tf-transformations \
-                 ros-humble-rviz2
+                     ros-humble-tf-transformations \
+                     ros-humble-rviz2
     pip install ultralytics scikit-learn
 
 

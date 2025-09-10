@@ -5,7 +5,7 @@ lidar:
   points_per_second: 2621440 
   rotation_frequency: 20
   upper_fov: 21.1
-  lower_fov: 21.2
+  lower_fov: -21.2
   noise_stddev: 0.03
 
 camera:
@@ -16,9 +16,10 @@ camera:
 
 radar:
   blueprint: sensor.other.radar
-  horizontal_fov: 100
-  vertical_fov: 15
+  horizontal_fov: 50
+  vertical_fov: 7.5
   range: 64
+  sensor_tick : 0.05
 
 gnss:
   blueprint: sensor.other.gnss

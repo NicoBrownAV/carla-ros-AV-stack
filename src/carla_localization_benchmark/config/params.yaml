@@ -1,0 +1,27 @@
+carla_localization_benchmark:
+  ros__parameters:
+    # Topics (adjust to your CARLA bridge)
+    gt_odom_topic: "/carla/ego/ground_truth/odom"   # nav_msgs/Odometry
+    noisy_odom_topic: "/sim/gps/odom"               # nav_msgs/Odometry (noisy GPS pose)
+    noisy_imu_topic: "/sim/imu"                     # sensor_msgs/Imu
+    fused_odom_topic: "/fusion/odom"                # nav_msgs/Odometry
+    gt_path_topic: "/viz/gt_path"
+    ekf_path_topic: "/viz/ekf_path"
+    gps_path_topic: "/viz/gps_path"
+
+    # Noise parameters (tuned to be “real-ish”, tweak as desired)
+    gps_xy_std_m: 0.8           # 1-sigma horizontal (m)
+    gps_bias_std_m: 1.5         # slow bias drift SD (m)
+    imu_gyro_std: 0.01          # rad/s white noise
+    imu_gyro_bias_std: 0.005    # rad/s bias random walk
+    imu_ax_std: 0.3             # m/s^2 white noise
+    imu_ax_bias_std: 0.1        # m/s^2 random walk
+
+    # EKF model + timings
+    ekf_rate_hz: 50.0
+    gps_rate_hz: 10.0
+    imu_rate_hz: 100.0
+    publish_paths: true
+    live_plot: false            # set true to pop a live figure
+    csv_log_path: ""            # e.g., "/home/Pictures/loc_bench.csv" (empty = disabled)
+

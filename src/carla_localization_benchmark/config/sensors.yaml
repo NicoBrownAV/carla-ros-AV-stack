@@ -1,0 +1,33 @@
+lidar:
+  blueprint: sensor.lidar.ray_cast
+  range: 90.0
+  channels: 64
+  points_per_second: 2621440
+  rotation_frequency: 20
+  upper_fov: 21.1
+  lower_fov: -21.2
+  noise_stddev: 0.03
+
+camera:
+  blueprint: sensor.camera.rgb
+  image_size_x: 800
+  image_size_y: 600
+  fov: 90
+
+radar:
+  blueprint: sensor.other.radar
+  horizontal_fov: 50
+  vertical_fov: 7.5
+  range: 64
+  sensor_tick: 0.05
+
+gnss:
+  blueprint: sensor.other.gnss
+  noise_lat_stddev: 0.0001
+  noise_lon_stddev: 0.0001
+  noise_alt_stddev: 0.5
+
+imu:
+  blueprint: sensor.other.imu
+  sensor_tick: 0.01   # 100 Hz; adjust as you like
+  # (Optional per-CARLA-version IMU noise/bias attrs can go here; leaving defaults is fine)

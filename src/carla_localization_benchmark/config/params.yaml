@@ -18,10 +18,19 @@ carla_localization_benchmark:
     imu_ax_bias_std: 0.1        # m/s^2 random walk
 
     # EKF model + timings
+    init_source: "gps"
+    init_with_velocity: true
+    q_x: 0.05
+    q_y: 0.05
+    q_yaw: 0.02
+    q_v: 0.20
+    gps_r_x_std_m: 0.8
+    gps_r_y_std_m: 0.8
+    gps_gate_chi2: 7.0
     ekf_rate_hz: 50.0
     gps_rate_hz: 10.0
     imu_rate_hz: 100.0
     publish_paths: true
-    live_plot: false            # set true to pop a live figure
-    csv_log_path: ""            # e.g., "/home/Pictures/loc_bench.csv" (empty = disabled)
+    live_plot: true            # set true to pop a live figure
+    csv_log_path: "~/Documents/1.Localization_data/ekf_run_0.csv"            # e.g., "/home/Documents/loc_bench.csv" (empty = disabled)
 

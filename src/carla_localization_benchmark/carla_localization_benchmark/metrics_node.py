@@ -1,59 +1,65 @@
-import math, csv
+#!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
-
-def rmse(accum):
-    if len(accum)==0: return float('nan')
-    s = sum(v*v for v in accum)
-    return math.sqrt(s/len(accum))
+from sensor_msgs.msg import Imu, NavSatFix
+from geometry_msgs.msg import TwistStamped
 
 class MetricsNode(Node):
     def __init__(self):
         super().__init__('metrics_node')
-        self.declare_parameters('', [
-            ('gt_odom_topic', '/carla/ego/ground_truth/odom'),
-            ('fused_odom_topic', '/fusion/odom'),
-            ('window_n', 300),             # ~6s at 50 Hz
-            ('csv_log_path', ''),          # optional separate CSV for metrics
-        ])
-        p = self.get_parameter
-        self.gt_topic = p('gt_odom_topic').value
-        self.fused_topic = p('fused_odom_topic').value
-        self.winN = int(p('window_n').value)
-        self.csv_path = p('csv_log_path').value
+        self.last_imu = None
+        self.last_gps = None
+        self.last_wheel = None
+        self.gt_msg = None
 
-        self.sub_gt = self.create_subscription(Odometry, self.gt_topic, self.on_gt, 10)
-        self.sub_fused = self.create_subscription(Odometry, self.fused_topic, self.on_fused, 10)
+        self.create_subscription(Imu, '/imu/data', self.on_imu, 50)
+        self.create_subscription(NavSatFix, '/gps/fix', self.on_gps, 10)
+        self.create_subscription(Odometry, '/wheel/odom', self.on_wheel, 20)
+        self.create_subscription(Odometry, '/fusion/odom', self.on_fused, 20)
+        self.create_subscription(Odometry, '/carla/ego/ground_truth/odom', self.on_gt, 20)
+        self.create_subscription(TwistStamped, '/filter/compute_time', self.on_compute_time, 10)
 
-        self.gt = None
-        self.err_x2 = []
-        self.err_y2 = []
+    def to_ns(self, stamp):
+        return stamp.sec * 1_000_000_000 + stamp.nanosec
 
-        self.csv = open(self.csv_path, 'w') if self.csv_path else None
-        if self.csv:
-            self.csv_writer = csv.writer(self.csv)
-            self.csv_writer.writerow(['stamp_ns', 'rmse_xy_m'])
+    def on_imu(self, msg: Imu):
+        self.last_imu = self.to_ns(msg.header.stamp)
 
-    def on_gt(self, msg):
-        self.gt = msg
+    def on_gps(self, msg: NavSatFix):
+        self.last_gps = self.to_ns(msg.header.stamp)
 
-    def on_fused(self, msg):
-        if self.gt is None: return
-        ex = msg.pose.pose.position.x - self.gt.pose.pose.position.x
-        ey = msg.pose.pose.position.y - self.gt.pose.pose.position.y
-        self.err_x2.append(ex*ex)
-        self.err_y2.append(ey*ey)
-        if len(self.err_x2) > self.winN:
-            self.err_x2.pop(0); self.err_y2.pop(0)
-        rmse_xy = math.sqrt((sum(self.err_x2)+sum(self.err_y2))/max(1,len(self.err_x2)))
-        self.get_logger().info(f"RMSE(xy) over last {len(self.err_x2)} samples: {rmse_xy:.3f} m", throttle_duration_sec=1.0)
-        if self.csv:
-            self.csv_writer.writerow([msg.header.stamp.sec*10**9 + msg.header.stamp.nanosec, rmse_xy])
-            self.csv.flush()
+    def on_wheel(self, msg: Odometry):
+        self.last_wheel = self.to_ns(msg.header.stamp)
 
-def main():
-    rclpy.init()
-    rclpy.spin(MetricsNode())
+    def on_gt(self, msg: Odometry):
+        self.gt_msg = msg
+
+    def on_compute_time(self, msg: TwistStamped):
+        # msg.twist.linear.x holds compute duration in microseconds
+        compute_us = msg.twist.linear.x
+        self.get_logger().info(f'Filter compute time (us): {compute_us}')
+
+    def on_fused(self, msg: Odometry):
+        out_ns = self.to_ns(msg.header.stamp)
+        inputs = [t for t in [self.last_imu, self.last_gps, self.last_wheel] if t is not None]
+        if inputs:
+            lat = out_ns - max(inputs)
+            self.get_logger().info(f'Latency (ns): {lat}')
+
+        if self.gt_msg:
+            dx = msg.pose.pose.position.x - self.gt_msg.pose.pose.position.x
+            dy = msg.pose.pose.position.y - self.gt_msg.pose.pose.position.y
+            dz = msg.pose.pose.position.z - self.gt_msg.pose.pose.position.z
+            err = (dx*dx + dy*dy + dz*dz)**0.5
+            self.get_logger().info(f'Pos error: {err}')
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = MetricsNode()
+    rclpy.spin(node)
+    node.destroy_node()
     rclpy.shutdown()
 
+if __name__ == '__main__':
+    main()
